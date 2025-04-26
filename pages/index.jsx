@@ -1,6 +1,6 @@
 // pages/index.jsx
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   LineChart, Line, ResponsiveContainer
@@ -84,7 +84,7 @@ const EbitdaChart = ({ data, color }) => (
 )
 
 // —————————————————————————————————————————————————————————————————————————————
-// 3. TEMPLATE “GOLDMAN” (exemplo único aqui; basta replicar para os outros)
+// 3. TEMPLATE “GOLDMAN” — você pode clonar esta função para os demais
 // —————————————————————————————————————————————————————————————————————————————
 
 const GoldmanTemplate = ({ data, logo }) => (
@@ -310,13 +310,21 @@ const GoldmanTemplate = ({ data, logo }) => (
 )
 
 // —————————————————————————————————————————————————————————————————————————————
-// 4. PÁGINA PRINCIPAL
+// 4. DISABLING SSR: renderiza só no cliente para evitar o erro #130
 // —————————————————————————————————————————————————————————————————————————————
 
-export default function Home() {
+export default function PageWrapper() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  return mounted
+    ? <HomeComponent />
+    : null
+}
+
+// esse é o seu componente “Home” completo
+function HomeComponent() {
   const [data, setData] = useState(defaultData)
   const [logo, setLogo] = useState(null)
-  const [tpl, setTpl] = useState('goldman') // só temos ‘goldman’ aqui
   const previewRef = useRef()
 
   const onLogo = e => {
@@ -348,14 +356,11 @@ export default function Home() {
     link.click()
   }
 
-  // só um template por enquanto
-  const Template = GoldmanTemplate
-
   return (
     <div style={{ padding:20, fontFamily:'sans-serif' }}>
       <h1>Blind Teaser Builder</h1>
 
-      {/* Editor básico */}
+      {/* editor simplificado */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, margin:'16px 0' }}>
         <label>
           Company Name:
@@ -387,13 +392,13 @@ export default function Home() {
         </label>
       </div>
 
-      {/* Downloads */}
+      {/* botões de download */}
       <div style={{ marginBottom:16 }}>
         <button onClick={downloadPDF}>Baixar PDF</button>
         <button onClick={downloadPNG} style={{ marginLeft:8 }}>Baixar PNG</button>
       </div>
 
-      {/* Preview A4 */}
+      {/* preview A4 */}
       <div style={{ border:'1px solid #ccc', overflow:'auto', textAlign:'center' }}>
         <div
           ref={previewRef}
@@ -403,17 +408,8 @@ export default function Home() {
             transformOrigin:'top center'
           }}
         >
-          <Template data={data} logo={logo} />
+          <GoldmanTemplate data={data} logo={logo} />
         </div>
       </div>
     </div>
-  )
-}
-
-// —————————————————————————————————————————————————————————————————————————————
-// 5. DESABILITA O PRERENDER/SSG PARA NÃO CAIR NO ERRO #130
-// —————————————————————————————————————————————————————————————————————————————
-
-export async function getServerSideProps() {
-  return { props: {} }
 }
