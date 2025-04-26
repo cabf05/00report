@@ -1,9 +1,7 @@
-import dynamic from 'next/dynamic';
-import React from 'react';
+// pages/index.jsx
+import dynamic from 'next/dynamic'
 
-// dynamic import do Builder, SSR desabilitado
-const Builder = dynamic(() => import('../components/Builder'), { ssr: false });
-
-export default function HomePage() {
-  return <Builder />;
-}
+// dynamically load the Builder component only on the client
+export default dynamic(() => import('../components/Builder'), {
+  ssr: false,
+})
