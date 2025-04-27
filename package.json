@@ -1,17 +1,17 @@
 {
-  "name": "blind-teaser-builder",
+  "name": "blind-teaser-pdf",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "recharts": "^2.1.10",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^2.5.1",
-    "react-scripts": "5.0.1"
+    "next": "13.4.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "puppeteer-core": "^19.11.1",
+    "@sparticuz/chromium": "^1.15.1"
   }
 }
