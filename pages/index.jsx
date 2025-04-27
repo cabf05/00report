@@ -1,4 +1,3 @@
-// pages/index.jsx
 import { useState } from 'react';
 
 export default function Home() {
@@ -29,52 +28,50 @@ export default function Home() {
   };
 
   return (
-    <div style={{ padding: 20, maxWidth: 600, margin: 'auto', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ textAlign: 'center' }}>Blind Teaser Builder</h1>
+    <div style={{ padding:20, maxWidth:600, margin:'auto', fontFamily:'Arial,sans-serif' }}>
+      <h1 style={{ textAlign:'center' }}>Blind Teaser Builder</h1>
 
-      <label style={{ display: 'block', marginBottom: 8 }}>
+      {/** Campos responsivos */}
+      <label style={{ display:'block', marginBottom:8 }}>
         Company Name
         <input
           value={companyName}
-          onChange={e => setCompanyName(e.target.value)}
-          style={{ width: '100%', padding: 8, marginTop: 4 }}
+          onChange={e=>setCompanyName(e.target.value)}
+          style={{ width:'100%', padding:8, marginTop:4 }}
         />
       </label>
-
-      <label style={{ display: 'block', marginBottom: 8 }}>
+      <label style={{ display:'block', marginBottom:8 }}>
         Document Title
         <input
           value={documentTitle}
-          onChange={e => setDocumentTitle(e.target.value)}
-          style={{ width: '100%', padding: 8, marginTop: 4 }}
+          onChange={e=>setDocumentTitle(e.target.value)}
+          style={{ width:'100%', padding:8, marginTop:4 }}
         />
       </label>
-
-      <label style={{ display: 'block', marginBottom: 8 }}>
+      <label style={{ display:'block', marginBottom:8 }}>
         Market Overview
         <textarea
           rows={4}
           value={marketDescription}
-          onChange={e => setMarketDescription(e.target.value)}
-          style={{ width: '100%', padding: 8, marginTop: 4 }}
+          onChange={e=>setMarketDescription(e.target.value)}
+          style={{ width:'100%', padding:8, marginTop:4 }}
         />
       </label>
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <label style={{ flex: 1 }}>
+      <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
+        <label style={{ flex:1, minWidth:120 }}>
           Market Size
           <input
             value={marketSize}
-            onChange={e => setMarketSize(e.target.value)}
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
+            onChange={e=>setMarketSize(e.target.value)}
+            style={{ width:'100%', padding:8, marginTop:4 }}
           />
         </label>
-        <label style={{ flex: 1 }}>
+        <label style={{ flex:1, minWidth:120 }}>
           Growth Rate
           <input
             value={marketGrowth}
-            onChange={e => setMarketGrowth(e.target.value)}
-            style={{ width: '100%', padding: 8, marginTop: 4 }}
+            onChange={e=>setMarketGrowth(e.target.value)}
+            style={{ width:'100%', padding:8, marginTop:4 }}
           />
         </label>
       </div>
@@ -83,16 +80,16 @@ export default function Home() {
         onClick={generatePdf}
         disabled={loading}
         style={{
-          width: '100%',
-          padding: 12,
-          background: '#0A3161',
-          color: 'white',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: 16
+          width:'100%',
+          padding:12,
+          background:'#0A3161',
+          color:'white',
+          border:'none',
+          cursor:'pointer',
+          fontSize:16
         }}
       >
-        {loading ? 'Gerando PDF...' : 'Gerar PDF'}
+        {loading ? 'Gerando PDF…' : 'Gerar PDF'}
       </button>
     </div>
   );
