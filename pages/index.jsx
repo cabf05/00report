@@ -306,4 +306,4 @@ export default function Home() {
           cursor: 'pointer'
         }}
       >
-        {loading ? 'Gerando PDF…' : 'Ger
+        {loading ? 'Gerando PDF…' : 'Gerar pdf'}
