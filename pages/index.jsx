@@ -307,3 +307,17 @@ export default function Home() {
         }}
       >
         {loading ? 'Gerando PDF…' : 'Gerar pdf'}
+        </button>
+
+      {error && <p style={{ color: 'red', marginTop: 12 }}>{error}</p>}
+
+      {pdfUrl && (
+        <div style={{ marginTop: 20 }}>
+          <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
+            Visualizar PDF
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
