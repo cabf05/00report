@@ -3,7 +3,10 @@ import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST') {
+    res.status(405).end('Method Not Allowed');
+    return;
+  }
 
   const {
     companyName, documentTitle, confidential,
@@ -14,14 +17,16 @@ export default async function handler(req, res) {
     contactPerson, disclaimer
   } = req.body;
 
-  // converte arrays/strings vindos do JSON
+  // Prepare arrays
   const rev = revenueData;
   const ebt = ebitdaData;
   const kpiList = kpis;
   const strengthsList = Array.isArray(strengths) ? strengths : strengths.split('\n');
-  const structuresList = Array.isArray(potentialStructures) ? potentialStructures : potentialStructures.split('\n');
+  const structuresList = Array.isArray(potentialStructures)
+    ? potentialStructures
+    : potentialStructures.split('\n');
 
-  // gera o HTML completo
+  // Build HTML
   const html = `
   <!DOCTYPE html>
   <html lang="pt-BR">
@@ -35,7 +40,7 @@ export default async function handler(req, res) {
       header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;}
       header h1 { font-size:24px; font-weight:700; margin:0; color:#003366;}
       header .date { font-size:14px; color:#666;}
-      header .logo { width:120px; height:auto;}
+      header .confidential { font-size:10px; color:#666;}
       section { margin-bottom:20px; }
       h2 { font-size:18px; font-weight:600; border-bottom:2px solid #003366; padding-bottom:4px; margin-bottom:12px;}
       .kpi-grid { display:flex; gap:20px; flex-wrap:wrap; }
@@ -43,8 +48,8 @@ export default async function handler(req, res) {
       .kpi .value { font-size:20px; font-weight:700; color:#003366; }
       .kpi .label { font-size:12px; color:#555; margin-top:4px; }
       .charts { display:flex; gap:20px; }
-      .charts > div { flex:1; position:relative; height:300px; }
-      .charts canvas { width:100% !important; height:100% !important; background:#fff; border:1px solid #DDD; border-radius:4px; }
+      .charts > div { flex:1; position:relative; }
+      .charts canvas { width:100% !important; height:auto !important; background:#fff; border:1px solid #DDD; border-radius:4px; }
       footer { font-size:10px; color:#999; text-align:center; border-top:1px solid #DDD; padding-top:8px; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -56,7 +61,7 @@ export default async function handler(req, res) {
         <h1>${companyName}</h1>
         <div class="date">${documentTitle}</div>
       </div>
-      <div class="confidential" style="font-size:10px;color:#666;">${confidential}</div>
+      <div class="confidential">${confidential}</div>
     </header>
 
     <section>
@@ -112,26 +117,26 @@ export default async function handler(req, res) {
     <script>
       Chart.register(ChartDataLabels);
 
-      const revData = ${JSON.stringify(rev.map(r=>({ x: r.year, y: r.value })))};
-      const ebtData = ${JSON.stringify(ebt.map(r=>({ x: r.year, y: r.value })))};
-      const labels  = revData.map(d=>d.x);
+      const revData = ${JSON.stringify(rev.map(r => ({ x: r.year, y: r.value })))};
+      const ebtData = ${JSON.stringify(ebt.map(r => ({ x: r.year, y: r.value })))};
+      const labels = revData.map(d => d.x);
       const stepSize = 10;
 
-      // calcula um suggestedMax um passo acima do maior valor
       function calcMax(data) {
-        const max = Math.max(...data.map(d=>d.y));
-        return (Math.floor(max/stepSize) + 1) * stepSize;
+        const m = Math.max(...data.map(d => d.y));
+        return (Math.floor(m / stepSize) + 1) * stepSize;
       }
 
       const revMax = calcMax(revData);
       const ebtMax = calcMax(ebtData);
 
       const commonOpts = max => ({
-        responsive: false,
+        responsive: true,
+        maintainAspectRatio: true,
         scales: {
           y: {
             beginAtZero: true,
-            ticks: { stepSize: stepSize },
+            ticks: { stepSize },
             suggestedMax: max
           }
         },
@@ -142,7 +147,7 @@ export default async function handler(req, res) {
             anchor: 'end',
             align: 'end',
             offset: 4,
-            formatter: v=>v,
+            formatter: v => v,
             font: { weight: 'bold' }
           }
         }
@@ -155,8 +160,10 @@ export default async function handler(req, res) {
           labels,
           datasets: [{
             label: 'Receita (R$ M)',
-            data: revData.map(d=>d.y),
-            backgroundColor: labels.map(l=> l==='2025E' ? 'rgba(0,51,102,0.3)' : 'rgba(0,51,102,0.8)')
+            data: revData.map(d => d.y),
+            backgroundColor: labels.map(l =>
+              l === '2025E' ? 'rgba(0,51,102,0.3)' : 'rgba(0,51,102,0.8)'
+            )
           }]
         },
         options: {
@@ -179,8 +186,10 @@ export default async function handler(req, res) {
           labels,
           datasets: [{
             label: 'EBITDA (R$ M)',
-            data: ebtData.map(d=>d.y),
-            backgroundColor: labels.map(l=> l==='2025E' ? 'rgba(0,51,102,0.3)' : 'rgba(0,51,102,0.8)')
+            data: ebtData.map(d => d.y),
+            backgroundColor: labels.map(l =>
+              l === '2025E' ? 'rgba(0,51,102,0.3)' : 'rgba(0,51,102,0.8)'
+            )
           }]
         },
         options: {
@@ -199,13 +208,14 @@ export default async function handler(req, res) {
   </body>
   </html>`;
 
-  // gera o PDF
+  // Launch headless browser with larger viewport
   const browser = await puppeteer.launch({
     args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
     executablePath: await chromium.executablePath(),
     headless: chromium.headless,
+    defaultViewport: { width: 1200, height: 800, deviceScaleFactor: 2 }
   });
+
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'networkidle0' });
   const pdfBuffer = await page.pdf({
