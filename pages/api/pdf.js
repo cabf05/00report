@@ -4,6 +4,7 @@ import puppeteer from 'puppeteer-core';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+
   const {
     companyName, documentTitle, confidential,
     marketDescription, marketSize, marketGrowth,
@@ -13,186 +14,207 @@ export default async function handler(req, res) {
     contactPerson, disclaimer
   } = req.body;
 
-  // 1) HTML + Chart.js via CDN
+  // converte arrays/strings vindos do JSON
+  const rev = revenueData;
+  const ebt = ebitdaData;
+  const kpiList = kpis;
+  const strengthsList = Array.isArray(strengths) ? strengths : strengths.split('\n');
+  const structuresList = Array.isArray(potentialStructures) ? potentialStructures : potentialStructures.split('\n');
+
+  // gera o HTML completo
   const html = `
   <!DOCTYPE html>
-  <html>
+  <html lang="pt-BR">
   <head>
-    <meta charset="utf-8"/>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>${documentTitle}</title>
     <style>
-      @page { size: A4; margin: 0 }
-      * { box-sizing: border-box; }
-      body {
-        font-family: Arial, sans-serif;
-        color: #0A3161;
-        margin: 0; padding: 16px;
-        width: 210mm; height: 297mm;
-      }
-      .header {
-        display: flex; justify-content: space-between;
-        border-bottom: 2px solid #C4A962; padding-bottom: 8px; margin-bottom: 16px;
-      }
-      .title { font-size: 18px; font-weight: bold; margin: 0 }
-      .subtitle { font-size: 10px; margin: 0 }
-      .conf { font-size: 10px; background: #C4A962; opacity: 0.2; padding: 4px 8px; }
-      .section { margin-bottom: 16px }
-      h2 {
-        font-size: 14px; font-weight: bold;
-        border-left: 4px solid #C4A962; padding-left:4px; margin:0 0 8px 0;
-      }
-      p { font-size:12px; line-height:1.4; margin:0 0 8px 0 }
-      .row { display:flex; gap:8px; }
-      .card {
-        flex:1;
-        background:#F3F6F9;
-        padding:8px;
-        border-radius:4px;
-      }
-      .card h3 { margin:0 0 4px 0; font-size:10px; color:#666 }
-      .card p { margin:0; font-size:16px; font-weight:bold }
-      .flex { display:flex; gap:8px }
-      .kpis { display:flex; gap:8px; flex-wrap:wrap; margin:0 -4px }
-      .kpi {
-        flex:1; min-width:45mm;
-        background:#F3F6F9; padding:8px; border-radius:4px; margin:0 4px 8px;
-      }
-      .kpi h4 { margin:0; font-size:10px; color:#666 }
-      .kpi p { margin:4px 0 0; font-size:16px; font-weight:bold }
-      .kpi .chg { font-size:10px; margin-top:4px; display:block }
-      .two-cols { display:flex; gap:16px }
-      .col { flex:1 }
-      .footer {
-        position:absolute; bottom:16px; left:16px; right:16px;
-        font-size:9px; text-align:center; color:#666;
-      }
+      @page { size: A4; margin: 20mm; }
+      body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1A1A1A; line-height: 1.4; margin:0; padding:0;}
+      header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;}
+      header h1 { font-size:24px; font-weight:700; margin:0; color:#003366;}
+      header .date { font-size:14px; color:#666;}
+      header .logo { width:120px; height:auto;}
+      section { margin-bottom:20px; }
+      h2 { font-size:18px; font-weight:600; border-bottom:2px solid #003366; padding-bottom:4px; margin-bottom:12px;}
+      .kpi-grid { display:flex; gap:20px; flex-wrap:wrap; }
+      .kpi { flex:1 1 120px; background:#F5F7FA; border-radius:8px; padding:10px; text-align:center; }
+      .kpi .value { font-size:20px; font-weight:700; color:#003366; }
+      .kpi .label { font-size:12px; color:#555; margin-top:4px; }
+      .charts { display:flex; gap:20px; }
+      .charts > div { flex:1; position:relative; height:300px; }
+      .charts canvas { width:100% !important; height:100% !important; background:#fff; border:1px solid #DDD; border-radius:4px; }
+      footer { font-size:10px; color:#999; text-align:center; border-top:1px solid #DDD; padding-top:8px; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   </head>
   <body>
-    <div class="header">
+    <header>
       <div>
-        <div class="title">${companyName}</div>
-        <div class="subtitle">${documentTitle}</div>
+        <h1>${companyName}</h1>
+        <div class="date">${documentTitle}</div>
       </div>
-      <div class="conf">${confidential}</div>
-    </div>
+      <div class="confidential" style="font-size:10px;color:#666;">${confidential}</div>
+    </header>
 
-    <div class="section">
-      <h2>Market Overview</h2>
+    <section>
+      <h2>MERCADO</h2>
       <p>${marketDescription}</p>
-      <div class="row">
-        <div class="card"><h3>MARKET SIZE</h3><p>${marketSize}</p></div>
-        <div class="card"><h3>GROWTH RATE</h3><p>${marketGrowth}</p></div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="value">${marketSize}</div><div class="label">Market Size</div></div>
+        <div class="kpi"><div class="value">${marketGrowth}</div><div class="label">Growth Rate</div></div>
       </div>
-    </div>
+    </section>
 
-    <div class="section">
-      <h2>Financial Highlights</h2>
-      <canvas id="revChart" width="600" height="200"></canvas>
-      <p style="margin:16px 0 8px 0; font-weight:bold;">EBITDA (R$ millions)</p>
-      <canvas id="ebtChart" width="600" height="200"></canvas>
-    </div>
+    <section>
+      <h2>DESTAQUES FINANCEIROS</h2>
+      <div class="charts">
+        <div><canvas id="revenueChart"></canvas></div>
+        <div><canvas id="ebitdaChart"></canvas></div>
+      </div>
+    </section>
 
-    <div class="section">
-      <h2>Key Performance Indicators</h2>
-      <div class="kpis">
-        ${kpis.map(k=>`
+    <section>
+      <h2>KPIs</h2>
+      <div class="kpi-grid">
+        ${kpiList.map(k => `
           <div class="kpi">
-            <h4>${k.label.toUpperCase()}</h4>
-            <p>${k.value}</p>
-            <span class="chg" style="color:${k.positive?'green':'red'}">
-              ${k.change}
-            </span>
+            <div class="value">${k.value}</div>
+            <div class="label">${k.label}</div>
+            <div style="font-size:10px;color:${k.positive?'green':'red'};margin-top:4px;">${k.change}</div>
           </div>
         `).join('')}
       </div>
-    </div>
+    </section>
 
-    <div class="two-cols section">
-      <div class="col">
-        <h2>Company Overview</h2>
-        <p>${businessDescription}</p>
-        <div class="card">
-          <h3>KEY STRENGTHS</h3>
-          <ul>
-            ${strengths.map(s=>`<li style="font-size:10px">${s}</li>`).join('')}
-          </ul>
-        </div>
-      </div>
-      <div class="col">
-        <h2>Transaction</h2>
-        <p>${transactionObjective}</p>
-        <div class="card">
-          <h3>POTENTIAL STRUCTURES</h3>
-          <ul>
-            ${potentialStructures.map(s=>`<li style="font-size:10px">${s}</li>`).join('')}
-          </ul>
-        </div>
-      </div>
-    </div>
+    <section>
+      <h2>VISÃO GERAL DA EMPRESA</h2>
+      <p>${businessDescription}</p>
+      <ul>
+        ${strengthsList.map(s => `<li style="font-size:12px; margin-bottom:4px;">${s}</li>`).join('')}
+      </ul>
+    </section>
 
-    <div class="footer">
+    <section>
+      <h2>TRANSAÇÃO</h2>
+      <p>${transactionObjective}</p>
+      <ul>
+        ${structuresList.map(s => `<li style="font-size:12px; margin-bottom:4px;">${s}</li>`).join('')}
+      </ul>
+    </section>
+
+    <footer>
       ${contactPerson} — ${disclaimer}
-    </div>
+    </footer>
 
     <script>
-      // aguarde o Chart.js carregar
-      setTimeout(()=>{
-        const revCtx = document.getElementById('revChart').getContext('2d');
-        new Chart(revCtx, {
-          type: 'bar',
-          data: {
-            labels: ${JSON.stringify(revenueData.map(r=>r.year))},
-            datasets: [{
-              data: ${JSON.stringify(revenueData.map(r=>r.value))},
-              backgroundColor: '#0A3161',
-              borderRadius: 4
-            }]
-          },
-          options: { responsive:false, scales:{ x:{grid:{display:false}}, y:{beginAtZero:true}}}
-        });
-        const ebtCtx = document.getElementById('ebtChart').getContext('2d');
-        new Chart(ebtCtx, {
-          type: 'line',
-          data: {
-            labels: ${JSON.stringify(ebitdaData.map(r=>r.year))},
-            datasets: [{
-              data: ${JSON.stringify(ebitdaData.map(r=>r.value))},
-              borderColor: '#C4A962',
-              fill: false,
-              tension:0.4,
-              pointBackgroundColor:'white',
-              pointBorderColor:'#C4A962',
-              pointRadius:4
-            }]
-          },
-          options: { responsive:false, scales:{ x:{grid:{display:false}}, y:{beginAtZero:true}}}
-        });
-        window.chartRendered = true;
-      }, 500);
+      Chart.register(ChartDataLabels);
+
+      const revData = ${JSON.stringify(rev.map(r=>({ x: r.year, y: r.value })))};
+      const ebtData = ${JSON.stringify(ebt.map(r=>({ x: r.year, y: r.value })))};
+      const labels  = revData.map(d=>d.x);
+      const stepSize = 10;
+
+      // calcula um suggestedMax um passo acima do maior valor
+      function calcMax(data) {
+        const max = Math.max(...data.map(d=>d.y));
+        return (Math.floor(max/stepSize) + 1) * stepSize;
+      }
+
+      const revMax = calcMax(revData);
+      const ebtMax = calcMax(ebtData);
+
+      const commonOpts = max => ({
+        responsive: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: stepSize },
+            suggestedMax: max
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            color: '#000',
+            anchor: 'end',
+            align: 'end',
+            offset: 4,
+            formatter: v=>v,
+            font: { weight: 'bold' }
+          }
+        }
+      });
+
+      // Receita
+      new Chart(document.getElementById('revenueChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Receita (R$ M)',
+            data: revData.map(d=>d.y),
+            backgroundColor: labels.map(l=> l==='2025E' ? 'rgba(0,51,102,0.3)' : 'rgba(0,51,102,0.8)')
+          }]
+        },
+        options: {
+          ...commonOpts(revMax),
+          plugins: {
+            ...commonOpts(revMax).plugins,
+            title: {
+              display: true,
+              text: 'Evolução da Receita (R$ milhões)',
+              font: { size: 16, weight: '600' }
+            }
+          }
+        }
+      });
+
+      // EBITDA
+      new Chart(document.getElementById('ebitdaChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'EBITDA (R$ M)',
+            data: ebtData.map(d=>d.y),
+            backgroundColor: labels.map(l=> l==='2025E' ? 'rgba(0,51,102,0.3)' : 'rgba(0,51,102,0.8)')
+          }]
+        },
+        options: {
+          ...commonOpts(ebtMax),
+          plugins: {
+            ...commonOpts(ebtMax).plugins,
+            title: {
+              display: true,
+              text: 'Evolução do EBITDA (R$ milhões)',
+              font: { size: 16, weight: '600' }
+            }
+          }
+        }
+      });
     </script>
   </body>
   </html>`;
 
-  // 2) Launch headless Chrome
+  // gera o PDF
   const browser = await puppeteer.launch({
     args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
     executablePath: await chromium.executablePath(),
-    headless: chromium.headless
+    headless: chromium.headless,
   });
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'networkidle0' });
-  await page.waitForFunction('window.chartRendered === true', { timeout: 5000 });
-
-  // 3) Gerar PDF
-  const pdf = await page.pdf({
+  const pdfBuffer = await page.pdf({
     format: 'A4',
     printBackground: true,
-    margin: { top:0, bottom:0, left:0, right:0 }
+    margin: { top: '20mm', bottom: '20mm', left: '20mm', right: '20mm' }
   });
   await browser.close();
 
-  // 4) Retornar
-  res.setHeader('Content-Type','application/pdf');
-  res.send(pdf);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.send(pdfBuffer);
 }
