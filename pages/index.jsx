@@ -1,5 +1,5 @@
 // pages/index.jsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function Home() {
   const [useRawHtml, setUseRawHtml]       = useState(false);
@@ -47,15 +47,18 @@ export default function Home() {
   const [contactPerson, setContactPerson] = useState('Ana Silva, Investment Relations');
   const [disclaimer, setDisclaimer]       = useState('This teaser document contains confidential and proprietary information.');
   const [loading, setLoading]             = useState(false);
+  const [error, setError]                 = useState(null); // Estado para erros
+  const [pdfUrl, setPdfUrl]               = useState(null); // Estado para URL do PDF
 
   const generatePdf = async () => {
     setLoading(true);
+    setError(null); // Limpa erros anteriores
     const newWin = window.open('', '_blank');
     let payload;
 
     if (useRawHtml) {
       if (!rawHtml.trim()) {
-        alert('Cole algum HTML antes de gerar.');
+        setError('Cole algum HTML antes de gerar.');
         setLoading(false);
         return;
       }
@@ -80,7 +83,7 @@ export default function Home() {
           disclaimer
         };
       } catch (e) {
-        alert('Verifique os campos em JSON: ' + e.message);
+        setError('Verifique os campos em JSON: ' + e.message);
         setLoading(false);
         return;
       }
@@ -94,13 +97,14 @@ export default function Home() {
 
     if (!res.ok) {
       newWin?.close();
-      alert('Erro ao gerar PDF');
+      setError('Erro ao gerar PDF');
       setLoading(false);
       return;
     }
 
     const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    setPdfUrl(url); // Armazena a URL do PDF
     if (newWin) {
       newWin.location.href = url;
     } else {
@@ -178,7 +182,7 @@ export default function Home() {
               value={marketDescription}
               onChange={e => setMarketDescription(e.target.value)}
               rows={4}
-              style={{ width: '100%', padding: 8, marginTop: 4, fontFamily: 'monospace' }}
+              style=\{ width: '100%', padding: 8, marginTop: 4, fontFamily: 'monospace' }}
             />
           </label>
 
@@ -272,7 +276,7 @@ export default function Home() {
           </label>
 
           <label>
-            Contact Person & Title
+            Contact hạnPerson & Title
             <input
               value={contactPerson}
               onChange={e => setContactPerson(e.target.value)}
@@ -306,8 +310,8 @@ export default function Home() {
           cursor: 'pointer'
         }}
       >
-        {loading ? 'Gerando PDF…' : 'Gerar pdf'}
-        </button>
+        {loading ? 'Gerando PDF…' : 'Gerar PDF'}
+      </button>
 
       {error && <p style={{ color: 'red', marginTop: 12 }}>{error}</p>}
 
