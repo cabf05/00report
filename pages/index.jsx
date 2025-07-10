@@ -47,13 +47,14 @@ export default function Home() {
   const [contactPerson, setContactPerson] = useState('Ana Silva, Investment Relations');
   const [disclaimer, setDisclaimer]       = useState('This teaser document contains confidential and proprietary information.');
   const [loading, setLoading]             = useState(false);
-  const [error, setError]                 = useState(null); // Estado para erros
-  const [pdfUrl, setPdfUrl]               = useState(null); // Estado para URL do PDF
+  const [error, setError]                 = useState('');
+  const [pdfUrl, setPdfUrl]               = useState('');
 
   const generatePdf = async () => {
     setLoading(true);
-    setError(null); // Limpa erros anteriores
-    const newWin = window.open('', '_blank');
+    setError('');
+    setPdfUrl('');
+    
     let payload;
 
     if (useRawHtml) {
@@ -89,33 +90,38 @@ export default function Home() {
       }
     }
 
-    const res = await fetch('/api/pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    try {
+      const res = await fetch('/api/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-    if (!res.ok) {
-      newWin?.close();
-      setError('Erro ao gerar PDF');
+      if (!res.ok) {
+        throw new Error(`Erro HTTP: ${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      
+      setPdfUrl(url);
+      
+      // Abrir em nova aba
+      const newWin = window.open(url, '_blank');
+      if (!newWin) {
+        // Fallback para download se popup foi bloqueado
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'relatorio.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    } catch (err) {
+      setError('Erro ao gerar PDF: ' + err.message);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    setPdfUrl(url); // Armazena a URL do PDF
-    if (newWin) {
-      newWin.location.href = url;
-    } else {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'relatorio.pdf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }
-    setLoading(false);
   };
 
   return (
@@ -182,7 +188,7 @@ export default function Home() {
               value={marketDescription}
               onChange={e => setMarketDescription(e.target.value)}
               rows={4}
-              style=\{ width: '100%', padding: 8, marginTop: 4, fontFamily: 'monospace' }}
+              style={{ width: '100%', padding: 8, marginTop: 4, fontFamily: 'monospace' }}
             />
           </label>
 
@@ -276,7 +282,7 @@ export default function Home() {
           </label>
 
           <label>
-            Contact hạnPerson & Title
+            Contact Person & Title
             <input
               value={contactPerson}
               onChange={e => setContactPerson(e.target.value)}
@@ -303,11 +309,11 @@ export default function Home() {
           marginTop: 20,
           width: '100%',
           padding: 12,
-          background: '#0A3161',
+          background: loading ? '#ccc' : '#0A3161',
           color: 'white',
           fontSize: 16,
           border: 'none',
-          cursor: 'pointer'
+          cursor: loading ? 'not-allowed' : 'pointer'
         }}
       >
         {loading ? 'Gerando PDF…' : 'Gerar PDF'}
